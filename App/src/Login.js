@@ -7,13 +7,15 @@ import {
     Button,
     TouchableOpacity,
     Image,
-    Alert
+    Alert,
+    Platform
 } from 'react-native';
 import auth from '@react-native-firebase/auth';
 import database from '@react-native-firebase/database';
 import { GoogleSignin } from '@react-native-community/google-signin';
 import { LoginManager, AccessToken } from 'react-native-fbsdk';
 import { connect } from 'react-redux';
+import { isLogin, testAction } from './Redux/Actions/Actions';
 // import { userInfo } from './Redux/Actions/Actions';
 
 class Login extends Component {
@@ -31,6 +33,7 @@ class Login extends Component {
     }
 
     componentDidMount() {
+        console.log("islogin", this.props.AppReducer)
         GoogleSignin.configure({
             scopes: ['https://www.googleapis.com/auth/drive.readonly', 'profile', 'email'],
             webClientId: '627802040562-8p1301o8qoaa61aae28cohs87ogqas38.apps.googleusercontent.com',
@@ -60,6 +63,7 @@ class Login extends Component {
                     if (snapshot.val()) {
                         console.log("already user here")
                         console.log(snapshot.val())
+                        this.props.setTest(true);
                         this.props.navigation.navigate('Welcome', { data: G_user.additionalUserInfo.profile.email })
                     } else {
                         console.log("not user here")
@@ -83,103 +87,143 @@ class Login extends Component {
         }
     }
 
-    fbLogin = async () => {
-        try {
-            const result = await LoginManager.logInWithPermissions(['public_profile', 'email']);
 
-            if (result.isCancelled) {
-                throw 'User cancelled the login process';
-            }
+    FBFirebase_auth = () => {
 
-            // Once signed in, get the users AccesToken
-            const data = await AccessToken.getCurrentAccessToken();
-            console.log("data", data)
-            if (!data) {
-                throw 'Something went wrong obtaining access token';
-            }
-
-            // Create a Firebase credential with the AccessToken
-            const facebookCredential = auth.FacebookAuthProvider.credential(data.accessToken);
-            console.log("cred", facebookCredential)
-            // Sign-in the user with the credential
-            return auth().signInWithCredential(facebookCredential);
-        } catch (error) {
-            console.log(error)
+        if (Platform.OS === "android") {
+            LoginManager.setLoginBehavior("web_only");
+            //alert("set");
         }
+        LoginManager.logInWithPermissions(["public_profile", "email"])
+            .then((result) => {
+                if (result.isCancelled) {
+                    return Promise.reject(new Error('The user cancle request'))
+                }
+                return AccessToken.getCurrentAccessToken();
+            })
+            .then(data => {
+                const credential = auth.FacebookAuthProvider.credential(data.accessToken);
+                // console.log('credential', credential)
+                return auth().signInWithCredential(credential);
+            })
+            .then((currentUser) => {
 
-    }
+                console.log('currentUser Name::', currentUser.additionalUserInfo.profile.name)
+                console.log('currentUser email::', currentUser.additionalUserInfo.profile.email)
+                console.log('currentUser pic ::', currentUser.additionalUserInfo.profile.picture.data.url)
+                console.log('currentUser id::', currentUser.additionalUserInfo.profile.id)
+                // console.log('currentUserOnlyProfile', currentUser.additionalUserInfo.profile.picture.data.url)
+                // console.log('currentUser', currentUser.user)
+                // console.log(`Facebook login with user:${JSON.stringify(currentUser)}`)
 
-    onClickListener = (viewId) => {
-        Alert.alert("Alert", "Button pressed " + viewId);
-    }
-
-    clear() {
-        this.state({ username: '', email: '', password: '', phone: '' })
-    }
-
-    onsubmit = (email, password) => {
-        auth()
-            .createUserWithEmailAndPassword(email, password)
-            .then((res) => {
-                console.log(JSON.stringify(res))
                 database()
                     .ref('/users')
-                    .push({
-                        name: this.state.username,
-                        email: res.user.email,
-                        pic: res.user.photoURL === null ? 'https://bootdey.com/img/Content/avatar/avatar6.png' : res.user.photoURL,
-                        registre_type: 'email',
-                        userid: res.user.uid
-                    }).then((res) => console.log('Data set.', JSON.stringify(res)));
-                console.log(res.user.name + "  " + res.user.email + "  " + res.user.photoURL + "   " + res.user.uid)
-                alert('User account created & signed in!');
-                // navigation.navigate('Login');
-                // this.clear()
+                    .orderByChild("email")
+                    .equalTo(currentUser.additionalUserInfo.profile.email)
+                    .once("value")
+                    .then(snapshot => {
+                        if (snapshot.val()) {
+                            console.log("already user here")
+                            console.log(snapshot.val())
+                            this.props.setTest(true);
+                            this.props.navigation.navigate('Welcome', { data: currentUser.additionalUserInfo.profile.email })
+                        } else {
+                            console.log("not user here")
+                            console.log(snapshot.val())
+                            database()
+                                .ref('/users')
+                                .push({
+                                    name: currentUser.additionalUserInfo.profile.name,
+                                    email: currentUser.additionalUserInfo.profile.email,
+                                    pic: currentUser.additionalUserInfo.profile.picture.data.url === null ? 'https://bootdey.com/img/Content/avatar/avatar6.png' : currentUser.additionalUserInfo.profile.picture.data.url,
+                                    registre_type: 'facebook',
+                                    userid: currentUser.additionalUserInfo.profile.id
+                                }).then((userInfo) => console.log('Data set.', JSON.stringify(userInfo)));
+                            this.props.navigation.navigate('Welcome', { data: currentUser.additionalUserInfo.profile.email })
+                            console.log(Name + "  " + userInfo.user.email + "  " + userInfo.user.photoURL + "   " + userInfo.user.uid)
+                            alert('User account created & signed in!')
+                        }
+                    })
+
             })
-            .catch(error => {
-                if (error.code === 'auth/email-already-in-use') {
-                    console.log('That email address is already in use!');
-                    alert('That email address is already in use!')
-                }
 
-                if (error.code === 'auth/invalid-email') {
-                    console.log('That email address is invalid!');
-                    alert('That email address is invalid!')
-                }
-                else {
-                    alert(error)
-                }
+        // console.log(`Facebook login fail with error:${error}`);
 
-                console.error(error);
-            });
     }
 
-    User_Login = () => {
-        console.log(this.state.email, this.state.password)
-        try {
-            auth()
-                .signInWithEmailAndPassword(this.state.email, this.state.password)
-                .then(res => {
-                    console.log("ressssss", res)
-                    // this.props.setUserInfo(res)
-                    this.props.navigation.navigate('Welcome', { data: this.state.email })
 
+    onsubmit = (email, password) => {
+        console.log("email", email, "password", password)
+        if (email === "" && password.length === 0) {
+            alert("fil the deatils")
+        } else {
+            auth()
+                .createUserWithEmailAndPassword(email, password)
+                .then((res) => {
+                    console.log(JSON.stringify(res))
+                    database()
+                        .ref('/users')
+                        .push({
+                            name: this.state.username,
+                            email: res.user.email,
+                            pic: res.user.photoURL === null ? 'https://bootdey.com/img/Content/avatar/avatar6.png' : res.user.photoURL,
+                            registre_type: 'email',
+                            userid: res.user.uid
+                        }).then((res) => console.log('Data set.', JSON.stringify(res)));
+                    console.log(res.user.name + "  " + res.user.email + "  " + res.user.photoURL + "   " + res.user.uid)
+                    alert('User account created & signed in!');
+                    // navigation.navigate('Login');
+                    // this.clear()
                 })
                 .catch(error => {
-                    if (error.code === 'auth/user-not-found') {
-                        alert('That User not Register !')
-                    } else {
+                    if (error.code === 'auth/email-already-in-use') {
+                        console.log('That email address is already in use!');
+                        alert('That email address is already in use!')
+                    }
+
+                    if (error.code === 'auth/invalid-email') {
+                        console.log('That email address is invalid!');
+                        alert('That email address is invalid!')
+                    }
+                    else {
                         alert(error)
                     }
 
                     console.error(error);
                 });
-        } catch (error) {
-            alert(error.error)
-            console.log(error.toString(error));
         }
     }
 
+    User_Login = () => {
+        console.log(this.state.email, this.state.password)
+        if (this.state.email === "" || this.state.password === "") {
+            alert("fill details")
+        } else {
+            try {
+                auth()
+                    .signInWithEmailAndPassword(this.state.email, this.state.password)
+                    .then(res => {
+                        console.log("ressssss", res)
+                        // this.props.setUserInfo(res)
+                        this.props.setTest(true);
+                        this.props.navigation.navigate('Welcome', { data: this.state.email })
+
+                    })
+                    .catch(error => {
+                        if (error.code === 'auth/user-not-found') {
+                            alert('That User not Register !')
+                        } else {
+                            alert(error)
+                        }
+
+                        console.error(error);
+                    });
+            } catch (error) {
+                alert(error.error)
+                console.log(error.toString(error));
+            }
+        }
+    }
     render() {
         const { email, password } = this.state;
         return (
@@ -247,7 +291,7 @@ class Login extends Component {
                         <Text style={styles.loginText}>{"Google"}</Text>
                     </TouchableOpacity>
                     <TouchableOpacity style={[styles.buttonContainer, styles.loginButton, { backgroundColor: 'blue', borderRadius: 5 }]}
-                        onPress={() => this.fbLogin()}>
+                        onPress={() => this.FBFirebase_auth()}>
                         <Image style={styles.inputIcon} source={{ uri: 'data:image/png;base64,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' }} />
                         <Text style={styles.loginText}>{"FaceBook"}</Text>
                     </TouchableOpacity>
@@ -258,11 +302,13 @@ class Login extends Component {
 }
 
 const mapStateToProps = (state) => ({
-    // AppReducer: state.AppReducer.userInfo,
+    AppReducer: state.AppReducer.test,
+    isLogin: state.AppReducer.login
 });
 
 const mapDispatchToProps = (dispatch) => ({
-    // setUserInfo: (params) => dispatch(userInfo(params))
+    setLogin: (params) => dispatch(isLogin(params)),
+    setTest: (params) => dispatch(testAction(params))
 });
 
 export default connect(mapStateToProps, mapDispatchToProps)(Login);
