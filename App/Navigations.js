@@ -1,11 +1,11 @@
 import React from 'react'
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
-import Home from './src/Home'
-import Login from './src/Login'
-import Welcome from './src/Welcome';
+
+import Login from './src/Screens/Login'
+import Welcome from './src/Screens/Welcome';
 import { connect } from 'react-redux';
-import EditUser from './src/EditUser';
+import EditUser from './src/Screens/EditUser';
 
 
 const Stack = createStackNavigator();

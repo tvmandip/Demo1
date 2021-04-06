@@ -2,7 +2,9 @@ import React, { Component } from 'react'
 import { View, Text, TextInput, Image, TouchableOpacity } from 'react-native'
 import database from '@react-native-firebase/database';
 import { connect } from 'react-redux'
-import { userInfo } from './Redux/Actions/Actions';
+import { userInfo } from '../Redux/Actions/Actions';
+import InputBox from '../Component/InputBox'
+import Button from '../Component/Button'
 
 class EditUser extends Component {
     constructor(props) {
@@ -13,20 +15,22 @@ class EditUser extends Component {
             name: '',
             email: "",
             id: '',
-            pic: ''
+            pic: '',
+            fid: ''
         }
     }
 
     componentDidMount() {
         console.log("data of user", this.state.userDetails)
-        this.setState({ name: this.state.userDetails.name, id: this.state.userDetails.id, email: this.state.userDetails.email, pic: this.state.userDetails.profileImg })
+        this.setState({ name: this.state.userDetails.name, fid: this.state.userDetails.firebaseId, id: this.state.userDetails.id, email: this.state.userDetails.email, pic: this.state.userDetails.profileImg })
     }
 
+    //update user details
     userUpdate = (name, email) => {
-        console.log("data", email, name)
         try {
-            const res = database().ref(`/users`).child(this.state.id).update({ name, email })
-            // this.getUserInfo();
+            const res = database().ref(`/users`).child(this.state.fid).update({ name: name })
+            this.getUserInfo();
+            alert("User details updated")
             console.log("resss update", res)
         } catch (error) {
             console.log("err", error)
@@ -81,46 +85,47 @@ class EditUser extends Component {
                 <View style={{ backgroundColor: "#dfdfff", height: 100, justifyContent: 'center', alignItems: 'center' }}>
                     <TouchableOpacity
                         onPress={() => { this.props.navigation.navigate("Welcome") }}
-                        // onPress={() => { this.setState({ model: !this.state.model }) }}
                         style={{ position: 'absolute', left: 30, top: 30 }}
                     >
                         <Image style={{ height: 30, width: 30 }} source={{ uri: 'https://img.icons8.com/nolan/40/000000/back.png' }} />
                     </TouchableOpacity>
                     <Text style={{ fontSize: 18 }}>{"Edit User"}</Text>
                 </View>
-                <View style={{ paddingHorizontal: 5, top: 50, width: 250, alignSelf: 'center' }}>
-                    <TextInput
-                        placeholder="name"
-                        value={name}
-                        onChangeText={(txt) => {
-                            this.setState({ name: txt });
-                        }}
-                        style={{ backgroundColor: "lightgray", }}
-                    />
-                    <TextInput
-                        placeholder="email"
-                        value={email}
-                        style={{ backgroundColor: "lightgray", top: 15, }}
-                        onChangeText={(txt) => {
-                            this.setState({ email: txt });
-                        }}
-                    />
-                    <TextInput
+                <View style={{ paddingHorizontal: 5, top: 50, alignSelf: 'center' }}>
+                    <View style={{ marginTop: 30, }}>
+                        <InputBox
+                            InputBox_container={{ marginHorizontal: 22 }}
+                            placeholderTextColor="gray"
+                            placeholder="Name"
+                            value={name}
+                            onChangeText={(name) => this.setState({ name })}
+                        />
+                    </View>
+                    <View style={{ marginTop: 10 }}>
+                        <InputBox
+                            InputBox_container={{ marginHorizontal: 22 }}
+                            placeholderTextColor="gray"
+                            placeholder="Email"
+                            value={email}
+                            onChangeText={(email) => this.setState({ email })}
+                        />
+                    </View>
+                    <InputBox
                         editable={false}
                         placeholder="user Id"
                         value={id}
-                        style={{ backgroundColor: "lightgray", marginTop: 40 }}
+                        InputBox_container={{ marginHorizontal: 22 }}
+                        placeholderTextColor="gray"
                         onChangeText={(txt) => {
                             this.setState({ id: txt });
                         }}
                     />
                     <View style={{ marginTop: 30 }}>
-                        <TouchableOpacity
+                        <Button
                             onPress={() => { this.userUpdate(name, email) }}
-                            style={{ height: 50, width: 80, backgroundColor: 'blue', alignSelf: 'center', justifyContent: 'center' }}
-                        >
-                            <Text style={{ alignSelf: 'center', justifyContent: 'center', color: '#FFF', fontSize: 15 }}>Update</Text>
-                        </TouchableOpacity>
+                            buttoncontainer={{ height: 50, width: 80, alignSelf: 'center', justifyContent: 'center' }}
+                            BtnName={"Update"}
+                        />
                     </View>
                 </View>
             </View>

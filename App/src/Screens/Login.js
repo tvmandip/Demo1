@@ -4,7 +4,6 @@ import {
     Text,
     View,
     TextInput,
-    Button,
     TouchableOpacity,
     Image,
     Alert,
@@ -15,11 +14,13 @@ import database from '@react-native-firebase/database';
 import { GoogleSignin } from '@react-native-community/google-signin';
 import { LoginManager, AccessToken } from 'react-native-fbsdk';
 import { connect } from 'react-redux';
-import { isLogin, testAction } from './Redux/Actions/Actions';
-// import { userInfo } from './Redux/Actions/Actions';
+import { isLogin, testAction } from '../Redux/Actions/Actions';
+import Button from '../Component/Button'
+import InputBox from '../Component/InputBox'
+import Loader from './Loader';
+import Colors from '../Helper/Colors'
 
 class Login extends Component {
-
     constructor(props) {
         super(props);
         this.state = {
@@ -29,6 +30,7 @@ class Login extends Component {
             confrimPassword: '',
             phone: '',
             signUp: false,
+            loading: false
         }
     }
 
@@ -42,6 +44,7 @@ class Login extends Component {
         });
     }
 
+    // google login for user
     Google_Login = async () => {
         try {
             const { idToken } = await GoogleSignin.signIn();
@@ -88,6 +91,7 @@ class Login extends Component {
     }
 
 
+    // facebook login
     FBFirebase_auth = () => {
 
         if (Platform.OS === "android") {
@@ -151,7 +155,7 @@ class Login extends Component {
 
     }
 
-
+    //create user useing email
     onsubmit = (email, password) => {
         console.log("email", email, "password", password)
         if (email === "" && password.length === 0) {
@@ -194,15 +198,19 @@ class Login extends Component {
         }
     }
 
+    //email password login
     User_Login = () => {
+        this.setState({ loading: true })
         console.log(this.state.email, this.state.password)
         if (this.state.email === "" || this.state.password === "") {
             alert("fill details")
+            this.setState({ loading: false })
         } else {
             try {
                 auth()
                     .signInWithEmailAndPassword(this.state.email, this.state.password)
                     .then(res => {
+                        this.setState({ loading: false })
                         console.log("ressssss", res)
                         // this.props.setUserInfo(res)
                         this.props.setTest(true);
@@ -210,6 +218,7 @@ class Login extends Component {
 
                     })
                     .catch(error => {
+                        this.setState({ loading: false })
                         if (error.code === 'auth/user-not-found') {
                             alert('That User not Register !')
                         } else {
@@ -224,66 +233,79 @@ class Login extends Component {
             }
         }
     }
+
     render() {
         const { email, password } = this.state;
         return (
             <View style={styles.container}>
                 <Image style={styles.bgImage} source={{ uri: "https://image.freepik.com/free-vector/3d-paper-style-wallpaper_52683-34469.jpg" }} />
                 {this.state.signUp ? <View>
-                    <View style={styles.inputContainer}>
-                        <TextInput style={styles.inputs}
-                            placeholder="UserName"
-                            underlineColorAndroid='transparent'
-                            onChangeText={(username) => this.setState({ username })} />
-                        <Image style={styles.inputIcon} source={{ uri: 'https://img.icons8.com/nolan/40/000000/user.png' }} />
+                    {/* UserName Input View */}
+
+                    <View style={{ marginTop: 30, }}>
+                        <InputBox
+                            InputBox_container={{ marginHorizontal: 22 }}
+                            placeholderTextColor="gray"
+                            placeholder="User Name"
+                            onChangeText={(username) => this.setState({ username })}
+                            IMG={"https://img.icons8.com/nolan/40/000000/user.png"}
+                        />
                     </View>
-                    <View style={styles.inputContainer}>
-                        <TextInput style={styles.inputs}
+
+                    {/* Phone number Input View */}
+
+                    <View >
+                        <InputBox
+                            InputBox_container={{ marginHorizontal: 22 }}
+                            placeholderTextColor="gray"
                             placeholder="Phone"
+                            keyboardType="number-pad"
                             underlineColorAndroid='transparent'
-                            onChangeText={(phone) => this.setState({ phone })} />
-                        <Image style={styles.inputIcon} source={{ uri: 'https://img.icons8.com/nolan/40/000000/phone.png' }} />
+                            onChangeText={(phone) => this.setState({ phone })}
+                            IMG={"https://img.icons8.com/nolan/40/000000/phone.png"}
+                        />
                     </View>
+
                 </View> : null}
-                <View style={styles.inputContainer}>
-                    <TextInput style={styles.inputs}
-                        placeholder="Email"
+
+                {/* Email Input View */}
+
+                <View style={{ marginTop: !this.state.signUp ? 30 : 0, }}>
+                    <InputBox
+                        InputBox_container={{ marginHorizontal: 22, }}
+                        placeholderTextColor="gray"
                         keyboardType="email-address"
-                        underlineColorAndroid='transparent'
-                        onChangeText={(email) => this.setState({ email })} />
-                    <Image style={styles.inputIcon} source={{ uri: 'https://img.icons8.com/nolan/40/000000/email.png' }} />
+                        placeholder="Email ID"
+                        value={email}
+                        onChangeText={(email) => this.setState({ email })}
+                        IMG={"https://img.icons8.com/nolan/40/000000/email.png"}
+                    />
                 </View>
 
-                <View style={styles.inputContainer}>
-                    <TextInput style={styles.inputs}
-                        placeholder="Password"
+                {/* Password Input View */}
+
+                <View style={{ marginTop: 10, }}>
+                    <InputBox
+                        InputBox_container={{ marginHorizontal: 22, }}
+                        placeholderTextColor="gray"
                         secureTextEntry={true}
-                        underlineColorAndroid='transparent'
-                        onChangeText={(password) => this.setState({ password })} />
-                    <Image style={styles.inputIcon} source={{ uri: 'https://img.icons8.com/nolan/40/000000/key.png' }} />
+                        placeholder="Password"
+                        value={password}
+                        onChangeText={(password) => this.setState({ password })}
+                        IMG={"https://img.icons8.com/nolan/40/000000/password.png"}
+                    />
                 </View>
 
-                {this.state.signUp ? null :
-                    <TouchableOpacity style={styles.btnForgotPassword} onPress={() => this.onClickListener('restore_password')}>
-                        <Text style={styles.btnText}>Forgot your password?</Text>
-                    </TouchableOpacity>}
 
-                <TouchableOpacity style={[styles.buttonContainer, styles.loginButton]} onPress={() => this.state.signUp ? this.onsubmit(email, password) : this.User_Login()}>
-                    <Text style={styles.loginText}>{this.state.signUp ? "SignUp" : "Login"}</Text>
-                </TouchableOpacity>
-
+                <Button
+                    onPress={() => this.state.signUp ? this.onsubmit(email, password) : this.User_Login()}
+                    BtnName={this.state.signUp ? "SignUp" : "Login"} />
 
                 <TouchableOpacity style={styles.buttonContainer} onPress={() => this.setState({ signUp: !this.state.signUp })}>
                     <Text style={styles.btnText}>{!this.state.signUp ? "Register" : "Login"}</Text>
                 </TouchableOpacity>
 
                 <View style={{ top: 30 }}>
-                    {/* <GoogleSigninButton
-                        style={{ width: 200, height: 38, top: 10 }}
-                        size={GoogleSigninButton.Size.Wide}
-                        color={GoogleSigninButton.Color.Light}
-                        onPress={() => { this.Google_Login() }}
-                    /> */}
                     <TouchableOpacity
                         style={[styles.buttonContainer, styles.loginButton, { backgroundColor: 'red', borderRadius: 5 }]}
                         onPress={() => this.Google_Login()}>
@@ -296,6 +318,8 @@ class Login extends Component {
                         <Text style={styles.loginText}>{"FaceBook"}</Text>
                     </TouchableOpacity>
                 </View>
+
+                <Loader loading={this.state.loading} />
             </View>
         );
     }
@@ -320,11 +344,11 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: '#DCDCDC',
+        backgroundColor: Colors.white,
     },
     inputContainer: {
         borderBottomColor: '#F5FCFF',
-        backgroundColor: '#FFFFFF',
+        backgroundColor: Colors.white,
         borderRadius: 30,
         borderBottomWidth: 1,
         width: 300,
@@ -346,7 +370,7 @@ const styles = StyleSheet.create({
     inputs: {
         height: 45,
         marginLeft: 16,
-        borderBottomColor: '#FFFFFF',
+        borderBottomColor: Colors.white,
         flex: 1,
     },
     inputIcon: {
